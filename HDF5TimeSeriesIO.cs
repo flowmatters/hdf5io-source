@@ -12,6 +12,11 @@ namespace FlowMatters.Source.HDF5IO
 {
     public class HDF5TimeSeriesIO : MultiTimeSeriesIO
     {
+        private const string TIMESTEP = "TimeStep";
+        private const string START_DATE = "StartDate";
+        private const string SLASH_SUBST = "%SLASH%";
+        private const string UNITS = "Units";
+
         public override string Description => "HDF5 Based time series storage";
 
         public override string Filter => ".h5";
@@ -24,18 +29,19 @@ namespace FlowMatters.Source.HDF5IO
         public override void Load(FileReader reader)
         {
             var f = new HDF5File(reader.FileName);
-            data.AddRange(f.Groups.Select(kvp => ReadTimeSeries(kvp.Key, kvp.Value)).ToArray());
+            data.AddRange(f.DataSets.Select(kvp => ReadTimeSeries(kvp.Key, kvp.Value)).ToArray());
         }
 
-        private TimeSeries ReadTimeSeries(string name, HDF5Group group)
+        private TimeSeries ReadTimeSeries(string name, HDF5DataSet dataset)
         {
-            double[] values = (double[]) group.DataSets["Values"].Get();
-            DateTime[] dates = ((long[]) group.DataSets["Dates"].Get()).Select(ticks => new DateTime(ticks)).ToArray();
-            var result = TimeSeriesExtensions.FromDates(dates, values);
+            double[] values = (double[]) dataset.Get();
+            DateTime startDate = new DateTime((long) dataset.Attributes[START_DATE]);
+            var timeStep = TimeStep.FromName((string) dataset.Attributes[TIMESTEP]);
+            var result = new TimeSeries(startDate, timeStep, values);
             result.name = RestoreName(name);
-            if (group.Attributes.Contains("Units"))
+            if (dataset.Attributes.Contains(UNITS))
             {
-                string unitString = (string)group.Attributes["Units"];
+                string unitString = (string)dataset.Attributes[UNITS];
                 result.units = Unit.parse(unitString);
             }
             return result;
@@ -56,21 +62,21 @@ namespace FlowMatters.Source.HDF5IO
         {
             path = UniquePath(dest, ts, path);
             path = H5SafeName(path);
-            dest.CreateGroup(path);
-            var grp = dest.Groups[path];
-            grp.CreateDataset("Values",ts.ToArray());
-            grp.CreateDataset("Dates",ts.Ticks());
-            grp.Attributes.Create("Units",ts.units.ToString());
+            dest.CreateDataset(path, ts.ToArray());
+            var dataset = dest.DataSets[path];
+            dataset.Attributes.Create(UNITS, ts.units.ToString());
+            dataset.Attributes.Create(START_DATE,ts.timeForItem(0).Ticks);
+            dataset.Attributes.Create(TIMESTEP, ts.timeStep.Name);
         }
 
         private string H5SafeName(string path)
         {
-            return path.Replace("/", "%SLASH%");
+            return path.Replace("/", SLASH_SUBST);
         }
 
         private string RestoreName(string name)
         {
-            return name.Replace("%SLASH%", "/");
+            return name.Replace(SLASH_SUBST, "/");
         }
 
         private static string UniquePath(HDF5File dest, TimeSeries ts, string path)

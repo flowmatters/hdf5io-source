@@ -16,13 +16,14 @@ namespace FlowMatters.Source.HDF5IO.Tests
         [Test]
         public void SaveAndLoadDaily()
         {
+            var start = new DateTime(1990, 1, 1);
             double[] vals = Enumerable.Range(0, 1000).Select(i => (double) i).ToArray();
-            TimeSeries ts = new TimeSeries(new DateTime(1990, 1, 1), TimeStep.Daily, vals);
+            TimeSeries ts = new TimeSeries(start, TimeStep.Daily, vals);
             ts.name = "My Time Series";
             ts.units = Unit.PredefinedUnit(CommonUnits.cubicMetresPerSecond);
 
             vals = Enumerable.Range(1000, 1000).Select(i => (double) i).ToArray();
-            TimeSeries ts2 = new TimeSeries(new DateTime(1990, 1, 1), TimeStep.Daily, vals);
+            TimeSeries ts2 = new TimeSeries(start, TimeStep.Daily, vals);
             ts2.name = "Mine / Someone's Time Series";
             ts2.units = Unit.PredefinedUnit(CommonUnits.squareMetres);
 
@@ -38,11 +39,13 @@ namespace FlowMatters.Source.HDF5IO.Tests
 
             TimeSeries retrieved = (TimeSeries) reader.DataSets.First(t=>t.name=="My Time Series");
             Assert.IsTrue(ts.EqualData(retrieved));
+            Assert.IsTrue(ts.IsCompatibleWith(retrieved));
             Assert.AreEqual(ts.name, retrieved.name);
             Assert.AreEqual(Unit.PredefinedUnit(CommonUnits.cubicMetresPerSecond), retrieved.units);
 
             TimeSeries retrieved2 = (TimeSeries) reader.DataSets.First(t => t.name == "Mine / Someone's Time Series");
             Assert.IsTrue(ts2.EqualData(retrieved2));
+            Assert.IsTrue(ts2.IsCompatibleWith(retrieved2));
             Assert.AreEqual(ts2.name, retrieved2.name);
             Assert.AreEqual(Unit.PredefinedUnit(CommonUnits.squareMetres), retrieved2.units);
         }
