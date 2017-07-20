@@ -194,6 +194,13 @@ namespace FlowMatters.Source.HDF5IO.h5ss
                 return result;
             }
 
+            if (ClrType == typeof(float))
+            {
+                var result = new float[selectElemNpoints];
+                Marshal.Copy(native, result, 0, selectElemNpoints);
+                return result;
+            }
+
             if (ClrType == typeof(long))
             {
                 var result = new long[selectElemNpoints];
@@ -239,6 +246,10 @@ namespace FlowMatters.Source.HDF5IO.h5ss
             } else if (ClrType == typeof(double))
             {
                 Marshal.Copy((double[])oneD, 0, result, oneD.Length);
+            }
+            else if (ClrType == typeof(float))
+            {
+                Marshal.Copy((float[])oneD,0,result,oneD.Length);
             }
             else if (ClrType == typeof(long))
             {
@@ -327,6 +338,9 @@ namespace FlowMatters.Source.HDF5IO.h5ss
 
             if (clrType == typeof(double))
                 return H5T.copy(H5T.NATIVE_DOUBLE);
+
+            if (clrType == typeof(float))
+                return H5T.copy(H5T.NATIVE_FLOAT);
 
             if (clrType == typeof(int))
                 return H5T.copy(H5T.NATIVE_INT32);

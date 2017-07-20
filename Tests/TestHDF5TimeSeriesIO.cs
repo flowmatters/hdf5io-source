@@ -4,6 +4,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FlowMatters.Source.HDF5IO.h5ss;
 using NUnit.Framework;
 using TIME.Core;
 using TIME.DataTypes;
@@ -14,7 +15,18 @@ namespace FlowMatters.Source.HDF5IO.Tests
     public class TestHDF5TimeSeriesIO
     {
         [Test]
-        public void SaveAndLoadDaily()
+        public void SaveAndLoadDailyDouble()
+        {
+            SaveAndLoadDaily();
+        }
+
+        [Test]
+        public void SaveAndLoadDailyFloat()
+        {
+            SaveAndLoadDaily("float",HDF5IO.h5ss.HDF5DataType.Float);
+        }
+
+        private static void SaveAndLoadDaily(string fn="double",HDF5DataType precision=HDF5DataType.Double)
         {
             var start = new DateTime(1990, 1, 1);
             double[] vals = Enumerable.Range(0, 1000).Select(i => (double) i).ToArray();
@@ -28,16 +40,18 @@ namespace FlowMatters.Source.HDF5IO.Tests
             ts2.units = Unit.PredefinedUnit(CommonUnits.squareMetres);
 
             var writer = new HDF5TimeSeriesIO();
+            writer.DataType = precision;
+
             writer.Use(ts);
             writer.Use(ts2);
 
-            var fn = "_TestTimeSeriesIO.h5";
+            fn = fn+"_TestTimeSeriesIO.h5";
             writer.Save(fn);
 
             var reader = new HDF5TimeSeriesIO();
             reader.Load(fn);
 
-            TimeSeries retrieved = (TimeSeries) reader.DataSets.First(t=>t.name=="My Time Series");
+            TimeSeries retrieved = (TimeSeries) reader.DataSets.First(t => t.name == "My Time Series");
             Assert.IsTrue(ts.EqualData(retrieved));
             Assert.IsTrue(ts.IsCompatibleWith(retrieved));
             Assert.AreEqual(ts.name, retrieved.name);

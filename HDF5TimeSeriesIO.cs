@@ -20,6 +20,7 @@ namespace FlowMatters.Source.HDF5IO
         public override string Description => "HDF5 Based time series storage";
 
         public override string Filter => ".h5";
+        public HDF5DataType DataType { get; set; }
 
         public override bool CanSave(string filename)
         {
@@ -34,7 +35,7 @@ namespace FlowMatters.Source.HDF5IO
 
         private TimeSeries ReadTimeSeries(string name, HDF5DataSet dataset)
         {
-            double[] values = (double[]) dataset.Get();
+            double[] values = ReturnPrecision(dataset.Get());
             DateTime startDate = new DateTime((long) dataset.Attributes[START_DATE]);
             var timeStep = TimeStep.FromName((string) dataset.Attributes[TIMESTEP]);
             var result = new TimeSeries(startDate, timeStep, values);
@@ -62,11 +63,37 @@ namespace FlowMatters.Source.HDF5IO
         {
             path = UniquePath(dest, ts, path);
             path = H5SafeName(path);
-            dest.CreateDataset(path, ts.ToArray());
+            dest.CreateDataset(path, ConvertPrecision(ts.ToArray()));
             var dataset = dest.DataSets[path];
             dataset.Attributes.Create(UNITS, ts.units.ToString());
             dataset.Attributes.Create(START_DATE,ts.timeForItem(0).Ticks);
             dataset.Attributes.Create(TIMESTEP, ts.timeStep.Name);
+        }
+
+        private Array ConvertPrecision(double[] origArray)
+        {
+            switch (DataType)
+            {
+                case HDF5DataType.Double:
+                    return origArray;
+                case HDF5DataType.Float:
+                    return origArray.Select(d => (float) d).ToArray();
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        private double[] ReturnPrecision(Array array)
+        {
+            var elementType = array.ElementType();
+            if (elementType == typeof(double))
+                return (double[])array;
+
+            if (elementType == typeof(float))
+            {
+                return ((float[]) array).Select(f => (double) f).ToArray();
+            }
+            throw new NotImplementedException();
         }
 
         private string H5SafeName(string path)
