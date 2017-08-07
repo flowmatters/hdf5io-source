@@ -33,8 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HDF.PInvoke, Version=1.10.0.0, Culture=neutral, PublicKeyToken=18793c1fcffe58a3, processorArchitecture=MSIL">
-      <HintPath>packages\HDF.PInvoke.1.10.0.4\lib\Net45\HDF.PInvoke.dll</HintPath>
+    <Reference Include="FlowMatters.H5SS">
+      <HintPath>..\qldhydro\3rdparty\FlowMatters.H5SS.dll</HintPath>
     </Reference>
     <Reference Include="nunit.framework, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
     <Reference Include="System" />
@@ -49,16 +49,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="h5ss\HDF5Attributes.cs" />
-    <Compile Include="h5ss\HDF5Container.cs" />
-    <Compile Include="h5ss\HDF5File.cs" />
-    <Compile Include="h5ss\HDF5Group.cs" />
-    <Compile Include="h5ss\HDF5DataSet.cs" />
-    <Compile Include="h5ss\HDF5Object.cs" />
-    <Compile Include="h5ss\Tests\BaseHDF5WriteTest.cs" />
-    <Compile Include="h5ss\Tests\TestAttributes.cs" />
-    <Compile Include="h5ss\Tests\TestRead.cs" />
-    <Compile Include="h5ss\Tests\TestWrite.cs" />
     <Compile Include="HDF5TimeSeriesIO.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tests\TestHDF5TimeSeriesIO.cs" />
@@ -70,13 +60,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>xcopy /s /y "$(SolutionDir)packages\HDF5DotNet.x64.1.8.9\NativeBinaries\*.*" "$(TargetDir)"
-if not exist "$(TargetDir)bin32" md "$(TargetDir)bin32"
-xcopy /s /y "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin32\*.*" "$(TargetDir)bin32"
-if not exist "$(TargetDir)bin64" md "$(TargetDir)bin64"
-xcopy /s /y "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin64\*.*" "$(TargetDir)bin64"</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
