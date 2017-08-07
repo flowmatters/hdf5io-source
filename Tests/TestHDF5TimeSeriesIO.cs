@@ -20,7 +20,40 @@ namespace FlowMatters.Source.HDF5IO.Tests
         [Test]
         public void SaveAndLoadDailyFloat()
         {
-            SaveAndLoadDaily("float",HDF5IO.h5ss.HDF5DataType.Float);
+            SaveAndLoadDaily("float",HDF5DataType.Float);
+        }
+
+        [Test]
+        public void SaveAndLoadMetadata()
+        {
+            var start = new DateTime(1990, 1, 1);
+            double[] vals = Enumerable.Range(0, 1000).Select(i => (double)i).ToArray();
+            TimeSeries ts = new TimeSeries(start, TimeStep.Daily, vals);
+            ts.name = "My Time Series";
+            ts.units = Unit.PredefinedUnit(CommonUnits.cubicMetresPerSecond);
+
+            var metadata = new GenericTimeSeriesMetaData();
+            metadata.SetValue(GenericTimeSeriesMetaData.ElementName,"My Element");
+            metadata.SetValue(GenericTimeSeriesMetaData.RunName,"My Run Name");
+
+            ts.metadata = metadata;
+
+            var writer = new HDF5TimeSeriesIO();
+            writer.Use(ts);
+            var fn = "TestTimeSeriesIO_withMetadata.h5";
+            writer.Save(fn);
+
+            var reader = new HDF5TimeSeriesIO();
+            reader.Load(fn);
+
+            TimeSeries retrieved = (TimeSeries)reader.DataSets.First(t => t.name == "My Time Series");
+            Assert.IsTrue(ts.EqualData(retrieved));
+            Assert.IsTrue(ts.IsCompatibleWith(retrieved));
+
+            Assert.IsInstanceOf<GenericTimeSeriesMetaData>(retrieved.metadata);
+            var retrMetadata = (GenericTimeSeriesMetaData)retrieved.metadata;
+            Assert.AreEqual("My Element",metadata.GetValue<string>(GenericTimeSeriesMetaData.ElementName));
+            Assert.AreEqual("My Run Name", metadata.GetValue<string>(GenericTimeSeriesMetaData.RunName));
         }
 
         private static void SaveAndLoadDaily(string fn="double",HDF5DataType precision=HDF5DataType.Double)

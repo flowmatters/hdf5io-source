@@ -14,6 +14,7 @@ namespace FlowMatters.Source.HDF5IO
         private const string START_DATE = "StartDate";
         private const string SLASH_SUBST = "%SLASH%";
         private const string UNITS = "Units";
+        private const string META_PREFIX = "_META_";
 
         public override string Description => "HDF5 Based time series storage";
 
@@ -43,6 +44,18 @@ namespace FlowMatters.Source.HDF5IO
                 string unitString = (string)dataset.Attributes[UNITS];
                 result.units = Unit.parse(unitString);
             }
+
+            foreach (string key in dataset.Attributes.Keys)
+            {
+                if (!key.StartsWith(META_PREFIX))
+                    continue;
+
+                if (!(result.metadata is GenericTimeSeriesMetaData))
+                    result.metadata = new GenericTimeSeriesMetaData();
+
+                var meta = (GenericTimeSeriesMetaData) result.metadata;
+                meta.SetValue(key.Substring(META_PREFIX.Length),dataset.Attributes[key]);
+            }
             return result;
         }
 
@@ -66,6 +79,17 @@ namespace FlowMatters.Source.HDF5IO
             dataset.Attributes.Create(UNITS, ts.units.ToString());
             dataset.Attributes.Create(START_DATE,ts.timeForItem(0).Ticks);
             dataset.Attributes.Create(TIMESTEP, ts.timeStep.Name);
+
+            if (ts.metadata is GenericTimeSeriesMetaData)
+            {
+                var meta = (GenericTimeSeriesMetaData) ts.metadata;
+                foreach (var key in meta.GetKeys())
+                {
+                    var val = meta.GetValue<object>(key);
+                    if (val is string || val is float || val is long || val is double || val is int)
+                        dataset.Attributes.Create(META_PREFIX + key, val);
+                }
+            }
         }
 
         private Array ConvertPrecision(double[] origArray)
