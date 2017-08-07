@@ -10,11 +10,19 @@ namespace FlowMatters.Source.HDF5IO
 {
     public class HDF5TimeSeriesIO : MultiTimeSeriesIO
     {
-        private const string TIMESTEP = "TimeStep";
-        private const string START_DATE = "StartDate";
-        private const string SLASH_SUBST = "%SLASH%";
-        private const string UNITS = "Units";
-        private const string META_PREFIX = "_META_";
+        public static bool DEFAULT_LAZY_LOAD=true;
+
+        public HDF5TimeSeriesIO()
+        {
+            LazyLoad = DEFAULT_LAZY_LOAD;
+        }
+
+        public HDF5TimeSeriesIO(bool lazyLoad)
+        {
+            LazyLoad = lazyLoad;
+        }
+
+        public bool LazyLoad { get; set; }
 
         public override string Description => "HDF5 Based time series storage";
 
@@ -30,31 +38,43 @@ namespace FlowMatters.Source.HDF5IO
         {
             var f = new HDF5File(reader.FileName);
             data.AddRange(f.DataSets.Select(kvp => ReadTimeSeries(kvp.Key, kvp.Value)).ToArray());
+            // When to close?
+            if (!LazyLoad)
+                f.Close();
         }
 
         private TimeSeries ReadTimeSeries(string name, HDF5DataSet dataset)
         {
-            double[] values = ReturnPrecision(dataset.Get());
-            DateTime startDate = new DateTime((long) dataset.Attributes[START_DATE]);
-            var timeStep = TimeStep.FromName((string) dataset.Attributes[TIMESTEP]);
-            var result = new TimeSeries(startDate, timeStep, values);
-            result.name = RestoreName(name);
-            if (dataset.Attributes.Contains(UNITS))
+            TimeSeries result;
+            if (LazyLoad)
             {
-                string unitString = (string)dataset.Attributes[UNITS];
+                result = new TimeSeries(new HDF5TimeSeriesState(dataset));
+            }
+            else
+            {
+                DateTime startDate = new DateTime((long)dataset.Attributes[Constants.START_DATE]);
+                var timeStep = TimeStep.FromName((string)dataset.Attributes[Constants.TIMESTEP]);
+                double[] values = ReturnPrecision(dataset.Get());
+                result = new TimeSeries(startDate, timeStep, values);
+            }
+
+            result.name = RestoreName(name);
+            if (dataset.Attributes.Contains(Constants.UNITS))
+            {
+                string unitString = (string)dataset.Attributes[Constants.UNITS];
                 result.units = Unit.parse(unitString);
             }
 
             foreach (string key in dataset.Attributes.Keys)
             {
-                if (!key.StartsWith(META_PREFIX))
+                if (!key.StartsWith(Constants.META_PREFIX))
                     continue;
 
                 if (!(result.metadata is GenericTimeSeriesMetaData))
                     result.metadata = new GenericTimeSeriesMetaData();
 
                 var meta = (GenericTimeSeriesMetaData) result.metadata;
-                meta.SetValue(key.Substring(META_PREFIX.Length),dataset.Attributes[key]);
+                meta.SetValue(key.Substring(Constants.META_PREFIX.Length),dataset.Attributes[key]);
             }
             return result;
         }
@@ -76,9 +96,9 @@ namespace FlowMatters.Source.HDF5IO
             path = H5SafeName(path);
             dest.CreateDataset(path, ConvertPrecision(ts.ToArray()));
             var dataset = dest.DataSets[path];
-            dataset.Attributes.Create(UNITS, ts.units.ToString());
-            dataset.Attributes.Create(START_DATE,ts.timeForItem(0).Ticks);
-            dataset.Attributes.Create(TIMESTEP, ts.timeStep.Name);
+            dataset.Attributes.Create(Constants.UNITS, ts.units.ToString());
+            dataset.Attributes.Create(Constants.START_DATE,ts.timeForItem(0).Ticks);
+            dataset.Attributes.Create(Constants.TIMESTEP, ts.timeStep.Name);
 
             if (ts.metadata is GenericTimeSeriesMetaData)
             {
@@ -87,7 +107,7 @@ namespace FlowMatters.Source.HDF5IO
                 {
                     var val = meta.GetValue<object>(key);
                     if (val is string || val is float || val is long || val is double || val is int)
-                        dataset.Attributes.Create(META_PREFIX + key, val);
+                        dataset.Attributes.Create(Constants.META_PREFIX + key, val);
                 }
             }
         }
@@ -105,7 +125,7 @@ namespace FlowMatters.Source.HDF5IO
             }
         }
 
-        private double[] ReturnPrecision(Array array)
+        internal static double[] ReturnPrecision(Array array)
         {
             var elementType = array.ElementType();
             if (elementType == typeof(double))
@@ -120,12 +140,12 @@ namespace FlowMatters.Source.HDF5IO
 
         private string H5SafeName(string path)
         {
-            return path.Replace("/", SLASH_SUBST);
+            return path.Replace("/", Constants.SLASH_SUBST);
         }
 
         private string RestoreName(string name)
         {
-            return name.Replace(SLASH_SUBST, "/");
+            return name.Replace(Constants.SLASH_SUBST, "/");
         }
 
         private static string UniquePath(HDF5File dest, TimeSeries ts, string path)
