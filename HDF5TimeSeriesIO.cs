@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FlowMatters.H5SS;
 using TIME.Core;
@@ -15,6 +16,8 @@ namespace FlowMatters.Source.HDF5IO
         public HDF5TimeSeriesIO()
         {
             LazyLoad = DEFAULT_LAZY_LOAD;
+            DataType=HDF5DataType.Double;
+            Compressed = true;
         }
 
         public HDF5TimeSeriesIO(bool lazyLoad)
@@ -23,7 +26,7 @@ namespace FlowMatters.Source.HDF5IO
         }
 
         public bool LazyLoad { get; set; }
-
+        public bool Compressed { get; set; }
         public override string Description => "HDF5 Based time series storage";
 
         public override string Filter => ".h5";
@@ -82,6 +85,7 @@ namespace FlowMatters.Source.HDF5IO
         public override void Save(FileWriter writer)
         {
             HDF5File dest = new HDF5File(writer.FileName,HDF5FileMode.WriteNew);
+            keysUsed.Clear();
             foreach (TimeSeries ts in DataSets)
             {
                 WriteTimeSeries(dest,ts);
@@ -90,12 +94,14 @@ namespace FlowMatters.Source.HDF5IO
             dest.Close();
         }
 
+        HashSet<string> keysUsed = new HashSet< string >();
+
         protected void WriteTimeSeries(HDF5File dest, TimeSeries ts, string path=null)
         {
             path = UniquePath(dest, ts, path);
-            path = H5SafeName(path);
-            dest.CreateDataset(path, ConvertPrecision(ts.ToArray()));
-            var dataset = dest.DataSets[path];
+            keysUsed.Add(path);
+            
+            var dataset = dest.CreateDataset(path, ConvertPrecision(ts.ToArray()),null,null,Compressed);
             dataset.Attributes.Create(Constants.UNITS, ts.units.ToString());
             dataset.Attributes.Create(Constants.START_DATE,ts.timeForItem(0).Ticks);
             dataset.Attributes.Create(Constants.TIMESTEP, ts.timeStep.Name);
@@ -138,7 +144,7 @@ namespace FlowMatters.Source.HDF5IO
             throw new NotImplementedException();
         }
 
-        private string H5SafeName(string path)
+        private static string H5SafeName(string path)
         {
             return path.Replace("/", Constants.SLASH_SUBST);
         }
@@ -148,16 +154,18 @@ namespace FlowMatters.Source.HDF5IO
             return name.Replace(Constants.SLASH_SUBST, "/");
         }
 
-        private static string UniquePath(HDF5File dest, TimeSeries ts, string path)
+        private string UniquePath(HDF5Container dest, TimeSeries ts, string path)
         {
             if (path == null)
             {
                 path = ts.name;
             }
 
+            path = H5SafeName(path);
+
             string origPath = path;
             int suffix = 1;
-            while (dest.Groups.ContainsKey(path) || dest.DataSets.ContainsKey(path))
+            while (keysUsed.Contains(path))
             {
                 path = $"{origPath} {suffix}";
                 suffix++;
