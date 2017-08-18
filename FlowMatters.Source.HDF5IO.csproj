@@ -37,8 +37,25 @@
       <HintPath>..\qldhydro\3rdparty\FlowMatters.H5SS.dll</HintPath>
     </Reference>
     <Reference Include="nunit.framework, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="RiverSystem, Version=4.2.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>References\RiverSystem.dll</HintPath>
+    </Reference>
+    <Reference Include="RiverSystem.Controls, Version=4.2.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>References\RiverSystem.Controls.dll</HintPath>
+    </Reference>
+    <Reference Include="RiverSystem.Controls.Common, Version=4.2.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>References\RiverSystem.Controls.Common.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -47,9 +64,18 @@
     <Reference Include="System.Xml" />
     <Reference Include="TIME">
     </Reference>
+    <Reference Include="TIME.ScenarioManagement, Version=4.2.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>References\TIME.ScenarioManagement.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants.cs" />
+    <Compile Include="DataStreamingOptionsMenuItem.cs" />
+    <Compile Include="DataStreamingOptionsWindow.xaml.cs">
+      <DependentUpon>DataStreamingOptionsWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="HDF5TimeSeriesIO.cs" />
     <Compile Include="HDF5TimeSeriesState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -61,6 +87,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="DataStreamingOptionsWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
