@@ -51,7 +51,7 @@ namespace FlowMatters.Source.HDF5IO
             TimeSeries result;
             if (LazyLoad)
             {
-                result = new TimeSeries(new HDF5TimeSeriesState(dataset));
+                result = new TimeSeries(HDF5TimeSeriesState.CreateRead(dataset));
             }
             else
             {
@@ -61,7 +61,7 @@ namespace FlowMatters.Source.HDF5IO
                 result = new TimeSeries(startDate, timeStep, values);
             }
 
-            result.name = RestoreName(name);
+            result.name = UniqueNameResolver.RestoreName(name);
             if (dataset.Attributes.Contains(Constants.UNITS))
             {
                 string unitString = (string)dataset.Attributes[Constants.UNITS];
@@ -85,7 +85,7 @@ namespace FlowMatters.Source.HDF5IO
         public override void Save(FileWriter writer)
         {
             HDF5File dest = new HDF5File(writer.FileName,HDF5FileMode.WriteNew);
-            keysUsed.Clear();
+            NameResolver.Reset();
             foreach (TimeSeries ts in DataSets)
             {
                 WriteTimeSeries(dest,ts);
@@ -94,28 +94,18 @@ namespace FlowMatters.Source.HDF5IO
             dest.Close();
         }
 
-        HashSet<string> keysUsed = new HashSet< string >();
+        UniqueNameResolver NameResolver = new UniqueNameResolver();
 
         protected void WriteTimeSeries(HDF5File dest, TimeSeries ts, string path=null)
         {
-            path = UniquePath(dest, ts, path);
-            keysUsed.Add(path);
+            path = NameResolver.UniquePath(path??ts.name);
             
             var dataset = dest.CreateDataset(path, ConvertPrecision(ts.ToArray()),null,null,Compressed);
             dataset.Attributes.Create(Constants.UNITS, ts.units.ToString());
             dataset.Attributes.Create(Constants.START_DATE,ts.timeForItem(0).Ticks);
             dataset.Attributes.Create(Constants.TIMESTEP, ts.timeStep.Name);
 
-            if (ts.metadata is GenericTimeSeriesMetaData)
-            {
-                var meta = (GenericTimeSeriesMetaData) ts.metadata;
-                foreach (var key in meta.GetKeys())
-                {
-                    var val = meta.GetValue<object>(key);
-                    if (val is string || val is float || val is long || val is double || val is int)
-                        dataset.Attributes.Create(Constants.META_PREFIX + key, val);
-                }
-            }
+            HDF5TimeSeriesMetadata.WriteMetadata(ts,dataset);
         }
 
         private Array ConvertPrecision(double[] origArray)
@@ -142,35 +132,6 @@ namespace FlowMatters.Source.HDF5IO
                 return ((float[]) array).Select(f => (double) f).ToArray();
             }
             throw new NotImplementedException();
-        }
-
-        private static string H5SafeName(string path)
-        {
-            return path.Replace("/", Constants.SLASH_SUBST);
-        }
-
-        private string RestoreName(string name)
-        {
-            return name.Replace(Constants.SLASH_SUBST, "/");
-        }
-
-        private string UniquePath(HDF5Container dest, TimeSeries ts, string path)
-        {
-            if (path == null)
-            {
-                path = ts.name;
-            }
-
-            path = H5SafeName(path);
-
-            string origPath = path;
-            int suffix = 1;
-            while (keysUsed.Contains(path))
-            {
-                path = $"{origPath} {suffix}";
-                suffix++;
-            }
-            return path;
         }
     }
 

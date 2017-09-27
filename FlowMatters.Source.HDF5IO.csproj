@@ -77,10 +77,14 @@
       <DependentUpon>DataStreamingOptionsWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="HDF5TimeSeriesIO.cs" />
+    <Compile Include="HDF5TimeSeriesMetadata.cs" />
     <Compile Include="HDF5TimeSeriesState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StreamingOutputManager.cs" />
     <Compile Include="Tests\TestHDF5TimeSeriesIO.cs" />
     <Compile Include="Tests\TestLazyLoad.cs" />
+    <Compile Include="Tests\TestStream.cs" />
+    <Compile Include="UniqueNameResolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

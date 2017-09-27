@@ -4,14 +4,51 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FlowMatters.H5SS;
+using TIME.Core;
 using TIME.DataTypes;
 using TIME.DataTypes.TimeSeriesImplementation;
 
 namespace FlowMatters.Source.HDF5IO
 {
-    class HDF5TimeSeriesState : TimeSeriesState
+    enum HDF5TimeSeriesMode
     {
-        public HDF5TimeSeriesState(HDF5DataSet dataset)
+        ReadOnly,
+        ReadWrite
+    }
+
+    public class HDF5TimeSeriesState : TimeSeriesState
+    {
+        public const int BUFFER_SIZE=256; // 256 entries translates to 2kb buffer @ double precision
+
+        public static HDF5TimeSeriesState CreateRead(HDF5DataSet dataset)
+        {
+            return new HDF5TimeSeriesState(dataset);
+        }
+
+        public static HDF5TimeSeriesState CreateBufferedWrite(HDF5Container parent,
+            DateTime start, DateTime end, TimeStep ts, Unit units, string name,
+            UniqueNameResolver resolver=null)
+        {
+            resolver = resolver ?? new UniqueNameResolver();
+
+            ulong[] shape = {(ulong) ts.numSteps(start, end)};
+            name = resolver.UniquePath(name);
+            HDF5DataSet ds = parent.CreateDataset(name, shape, typeof(double),chunkShape: new[]{(ulong)BUFFER_SIZE});
+            ds.Attributes.Create(Constants.UNITS, units.ToString());
+            ds.Attributes.Create(Constants.START_DATE, start.Ticks);
+            ds.Attributes.Create(Constants.TIMESTEP, ts.Name);
+
+            var result = new HDF5TimeSeriesState(ds);
+            result._start = start;
+            result._timeStep = ts;
+            result.InitialiseWriteMode();
+            return result;
+        }
+
+        private HDF5TimeSeriesMode _mode = HDF5TimeSeriesMode.ReadOnly;
+        private double[] buffer;
+        private ulong bufferLocation;
+        private HDF5TimeSeriesState(HDF5DataSet dataset)
         {
             DataSet = dataset;
         }
@@ -21,7 +58,14 @@ namespace FlowMatters.Source.HDF5IO
             DataSet = null;
         }
 
-        private HDF5DataSet DataSet { get; set; }
+        private void InitialiseWriteMode()
+        {
+            _mode = HDF5TimeSeriesMode.ReadWrite;
+            buffer = new double[BUFFER_SIZE];
+            bufferLocation = 0;
+        }
+
+        internal HDF5DataSet DataSet { get; set; }
 
         public bool Loaded { get; private set; }
 
@@ -52,8 +96,58 @@ namespace FlowMatters.Source.HDF5IO
 
         public override void setItem(int i, double v)
         {
-            EnsureLoaded();
-            Data[i]=v;
+            if (_mode == HDF5TimeSeriesMode.ReadOnly)
+            {
+                EnsureLoaded();
+                Data[i] = v;
+            }
+            else
+            {
+                if ((ulong)i >= (bufferLocation + BUFFER_SIZE))
+                {
+                    WriteBuffer();
+                    ZeroBuffer();
+                    bufferLocation = BUFFER_SIZE*((ulong) i/BUFFER_SIZE);
+                }
+                buffer[(ulong)i - bufferLocation] = v;
+            }
+        }
+
+        private void ZeroBuffer()
+        {
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = 0.0;
+            }
+        }
+
+        public void WriteBuffer()
+        {
+            var toWrite = buffer;
+            if ((bufferLocation + BUFFER_SIZE) >= (ulong)Count)
+            {
+                toWrite = SliceBuffer(0, (ulong)Count - bufferLocation);
+            }
+
+            DataSet.Put(toWrite,new ulong[] {bufferLocation});
+            DataSet.Flush();
+        }
+
+        private double[] SliceBuffer(ulong start, ulong endOpen)
+        {
+            ulong size = endOpen - start;
+            double[] result = new double[size];
+            for (ulong i = 0; i < (ulong)result.Length; i++)
+            {
+                result[i] = buffer[start + i];
+            }
+            return result;
+        }
+
+        public void SwitchToReadMode(IDictionary<String,HDF5DataSet> datasets)
+        {
+            buffer = null;
+            DataSet = datasets[DataSet.Name];
         }
 
         public double[] Data { get; private set; }
