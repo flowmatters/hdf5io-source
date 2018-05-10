@@ -18,7 +18,7 @@ namespace FlowMatters.Source.HDF5IO
 
     public class HDF5TimeSeriesState : TimeSeriesState
     {
-        public const int BUFFER_SIZE=256; // 256 entries translates to 2kb buffer @ double precision
+        public const int BUFFER_SIZE=512; // 256 entries translates to 4kb buffer @ double precision, which is one block of NTFS
 
         public static HDF5TimeSeriesState CreateRead(HDF5DataSet dataset)
         {
@@ -96,6 +96,7 @@ namespace FlowMatters.Source.HDF5IO
 
         public override void setItem(int i, double v)
         {
+            ulong offset = (ulong) i - bufferLocation;
             if (_mode == HDF5TimeSeriesMode.ReadOnly)
             {
                 EnsureLoaded();
@@ -103,13 +104,14 @@ namespace FlowMatters.Source.HDF5IO
             }
             else
             {
-                if ((ulong)i >= (bufferLocation + BUFFER_SIZE))
+                if (offset >= BUFFER_SIZE)
                 {
                     WriteBuffer();
                     ZeroBuffer();
                     bufferLocation = BUFFER_SIZE*((ulong) i/BUFFER_SIZE);
+                    offset = 0;
                 }
-                buffer[(ulong)i - bufferLocation] = v;
+                buffer[offset] = v;
             }
         }
 
