@@ -26,33 +26,20 @@ namespace FlowMatters.Source.HDF5IO
         IPluginRunEnd<RiverSystemScenario>,
         IPluginAfterStep<RiverSystemScenario>
     {
-        public StreamingOutputManager(RiverSystemScenario scenario) 
+        public StreamingOutputManager() 
         {
-            Scenario = scenario;
             OverwriteOption = StreamingOutputOverwriteOption.Fail;
 //            Configuration = config;
         }
 
         public RiverSystemConfiguration Configuration { get; set; }
-        public RiverSystemScenario Scenario { get; set; }
         public string Destination { get; set; }
         public StreamingOutputOverwriteOption OverwriteOption { get; set; }
         private HDF5File _destFile;
         private UniqueNameResolver _nameResolver;
         private List<HDF5TimeSeriesState> states;
         private List<TimeSeries> allSeries;
-        public int id
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-
-            set
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public int id {get; set; }
 
         //public TimeSeries DefaultMakeResultsTimeSeries(
         //    DateTime start, DateTime end, TimeStep ts, string name, Unit units)
@@ -175,7 +162,7 @@ namespace FlowMatters.Source.HDF5IO
             {
                 return scenario.PluginDataModels.OfType<StreamingOutputManager>().First();
             }
-            var streamer = new StreamingOutputManager(scenario);
+            var streamer = new StreamingOutputManager();
             streamer.Destination = destinationFilename;
             scenario.PluginDataModels.Add(streamer);
             return streamer;
