@@ -111,5 +111,27 @@ namespace FlowMatters.Source.HDF5IO
             allSeries = null;
             _destFile = null;
         }
+
+        public static StreamingOutputManager EnableStreaming(RiverSystemScenario scenario, string destinationFilename)
+        {
+            if (scenario.PluginDataModels.OfType<StreamingOutputManager>().Any())
+            {
+                return scenario.PluginDataModels.OfType<StreamingOutputManager>().First();
+            }
+            var streamer = new StreamingOutputManager(scenario);
+            streamer.Destination = destinationFilename;
+            scenario.PluginDataModels.Add(streamer);
+            return streamer;
+        }
+
+        public static void DisableStreaming(RiverSystemScenario scenario)
+        {
+            if (!scenario.PluginDataModels.OfType<StreamingOutputManager>().Any())
+            {
+                return;
+            }
+
+            scenario.PluginDataModels.RemoveAll(plugin=>plugin is StreamingOutputManager);
+        }
     }
 }

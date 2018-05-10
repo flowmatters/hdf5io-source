@@ -61,33 +61,12 @@ namespace FlowMatters.Source.HDF5IO
 //            MessageBox.Show("This form does nothing at the moment. Just sayin'");
             if (StreamingEnabled)
             {
-                ConfigureStreaming();
+                StreamingOutputManager.EnableStreaming(Scenario, RelativePathFileSelectorViewModel.FullPath);
             }
             else
             {
-                RemoveStreaming();
+                StreamingOutputManager.DisableStreaming(Scenario);
             }
-        }
-
-        void ConfigureStreaming()
-        {
-            if (Scenario.PluginDataModels.OfType<StreamingOutputManager>().Any())
-            {
-                return;
-            }
-            var streamer = new StreamingOutputManager(Scenario);
-            streamer.Destination = RelativePathFileSelectorViewModel.FullPath;
-            Scenario.PluginDataModels.Add(streamer);
-        }
-
-        void RemoveStreaming()
-        {
-            if (!Scenario.PluginDataModels.OfType<StreamingOutputManager>().Any())
-            {
-                return;
-            }
-
-            Scenario.PluginDataModels.RemoveAll(plugin=>plugin is StreamingOutputManager);
         }
     }
 }
