@@ -71,7 +71,7 @@ namespace FlowMatters.Source.HDF5IO
 
         public override int itemForTime(DateTime dt)
         {
-            return timeStep.itemForTime(dt) - timeStep.itemForTime(start);
+            return timeStep.numSteps(start, dt) - 1;
         }
 
         public override DateTime timeForItem(int i)
