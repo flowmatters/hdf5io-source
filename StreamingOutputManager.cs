@@ -98,6 +98,8 @@ namespace FlowMatters.Source.HDF5IO
 
             try
             {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
                 return new HDF5File(fn, HDF5FileMode.WriteNew);
             }
             catch (IOException)
