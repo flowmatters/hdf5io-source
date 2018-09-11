@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using FlowMatters.H5SS;
 using TIME.Core;
 using TIME.DataTypes;
@@ -32,8 +29,11 @@ namespace FlowMatters.Source.HDF5IO
             resolver = resolver ?? new UniqueNameResolver();
 
             ulong[] shape = {(ulong) ts.numSteps(start, end)};
+
+            if (String.IsNullOrEmpty(name))
+                name = "UNNAMED TIMESERIES";
             name = resolver.UniquePath(name);
-            HDF5DataSet ds = parent.CreateDataset(name, shape, typeof(double),chunkShape: new[]{(ulong)BUFFER_SIZE});
+            HDF5DataSet ds = parent.CreateDataset(name, shape, typeof(double),chunkShape: new[]{Math.Min((ulong)BUFFER_SIZE,shape[0])});
             ds.Attributes.Create(Constants.UNITS, units.ToString());
             ds.Attributes.Create(Constants.START_DATE, start.Ticks);
             ds.Attributes.Create(Constants.TIMESTEP, ts.Name);
