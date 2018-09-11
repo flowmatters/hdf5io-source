@@ -111,6 +111,7 @@ namespace FlowMatters.Source.HDF5IO
         private string IncrementFilename()
         {
             string fn = Destination;
+            string dir = Path.GetDirectoryName(Destination);
             string ext = Path.GetExtension(Destination);
             string baseName = Path.GetFileNameWithoutExtension(Destination);
             int n = 0;
@@ -120,7 +121,7 @@ namespace FlowMatters.Source.HDF5IO
                 n++;
                 fn = string.Format("{0} ({1}){2}", baseName, n, ext);
             }
-            return fn;
+            return Path.Combine(dir, fn);
         }
     }
 }
